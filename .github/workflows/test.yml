@@ -1,33 +1,17 @@
-name: "run-aqa build with push to master"
-on:
-  push:
-
-
+name: build
+on: push
 jobs:
-  installJDK: # make sure build/ci work properly
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [macos-latest] #[ubuntu-latest, macos-latest, windows-2016]
+  job1:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-    - uses: actions/checkout@v1
-    - run: |
-        sudo sysctl kern.sysv.shmmax
-        sudo sysctl -w kern.sysv.shmall=655360
-        sudo sysctl -w kern.sysv.shmmax=125839605760
-    - uses: AdoptOpenJDK/install-jdk@v1
-      with:
-        version: '15'
-        targets: 'JDK_15'
-        impl: 'openj9'
-        source: 'nightly'
-        #source: 'https://github.com/AdoptOpenJDK/openjdk8-binaries/releases/download/jdk8u-2020-12-02-12-32/OpenJDK8U-jdk_x64_linux_hotspot_2020-12-02-12-32.tar.gz'
-        #sourceType: 'url'
-    - name: AQA
-      uses: sophia-guo/run-aqa@SPEC
-      with: 
-        version: '15'
-        jdksource: 'install-jdk'
-        build_list: 'functional'
-        target: '_testSCCMLTests1_openj9'
+    - id: set-matrix
+      run: echo "::set-output name=matrix::{\"include\":[{\"project\":\"foo\",\"config\":\"Debug\"},{\"project\":\"bar\",\"config\":\"Release\"}]}"
+  job2:
+    needs: job1
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{fromJSON(needs.job1.outputs.matrix)}}
+    steps:
+    - run: build
